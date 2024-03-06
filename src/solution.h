@@ -33,11 +33,11 @@ struct Worker {
     std::string login;
     int maxLoad;
     int difference;
+    bool isOverworked;
 
-    Worker(const std::string& name, const std::string& login, int maxLoad);
+    Worker(const std::string& name, const std::string& login, int maxLoad, int difference, bool isOverworked);
 
     // might be needed for task 5
-    bool isOverworked(const std::vector<Task>& tasks) const;
     bool operator<(const Worker& newVector) const;
     bool operator==(const Worker& newVector) const{
         return this->login==newVector.login;
@@ -45,12 +45,13 @@ struct Worker {
 };
 
 // task 1
-Worker::Worker(const std::string& name, const std::string& login, int maxLoad)
+Worker::Worker(const std::string& name, const std::string& login, int maxLoad, int difference = 0, bool isOverworked = false)
 {
     this->name = name;
     this->login = login;
     this->maxLoad = maxLoad;
     this->difference = difference;
+    this->isOverworked = isOverworked;
 }
 
 
@@ -130,39 +131,34 @@ void addTask(std::vector<Task>& tasks, const Task& newTask, const std::vector<Wo
 }
 
 // task 6
-void addTaskVerbose(std::vector<Task>& tasks, const Task& newTask, const std::vector<Worker>& workers)
+void addTaskVerbose(std::vector<Task>& tasks, const Task& newTask, std::vector<Worker>& workers)
 {
     std::vector<Worker> overWorkedPeople;
+    tasks.push_back(newTask);
 
     for(auto workload: newTask.workloads) {
-        int newLoad = workload.second;
-        std::string login = workload.first;
-        for(Worker worker: workers) {
 
-            int load = (worker.login == login) ? getWorkerLoad(tasks, worker) + newLoad :  getWorkerLoad(tasks, worker);
-            // std::cout << worker.login << "\t ffffff" << load << '\t' << newLoad <<  '\t'<<  worker.maxLoad <<'\n';
-            auto it = find(overWorkedPeople.begin(), overWorkedPeople.end(), worker);
-            if (worker.maxLoad < load && it==overWorkedPeople.end()) {
-                worker.difference = load - worker.maxLoad;
-
-                overWorkedPeople.push_back(worker);
-                // throw std::runtime_error("Overworked");
+        for (Worker& worker: workers) {
+            int load = getWorkerLoad(tasks, worker);
+            if (worker.maxLoad < load) {
+                    worker.isOverworked = true;
+                    worker.difference = load - worker.maxLoad;
+                }
             }
-            else if (worker.login == login) {
-                tasks.push_back(newTask);
-            }
-
+        }
+            
+    for(Worker& worker: workers) {
+        if(worker.isOverworked) {
+            overWorkedPeople.push_back(worker);
         }
     }
-
     std::sort(overWorkedPeople.begin(), overWorkedPeople.end());
     std::string message = "Overworked:";
-    for(auto worker: overWorkedPeople) {
+    for(Worker& worker: overWorkedPeople) {
         message += " " + worker.login + " by " + std::to_string(worker.difference) + ",";
     }
     if(!overWorkedPeople.empty()) {
         message = message.substr(0, message.size() - 1);
         throw std::runtime_error(message);
-
     }
 }
